@@ -1,24 +1,81 @@
 import sys
+import pandas as pd
+from sqlalchemy import create_engine
+from nltk.tokenize import word_tokenize
+from nltk.stem import WordNetLemmatizer
 
+from sklearn.pipeline import Pipeline, FeatureUnion
+from sklearn.datasets import make_multilabel_classification
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+from sklearn.multioutput import MultiOutputClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.metrics import classification_report
+
+import nltk
+nltk.download('punkt')
+nltk.download('wordnet')
+import pickle
 
 def load_data(database_filepath):
-    pass
+    engine = create_engine('sqlite:///' + database_filepath)
+    df = pd.read_sql_table('data_prep', engine)  
+    X = df.message
+    Y = df.drop(['message', 'id', 'original', 'genre'], axis=1)
+    category_names = Y.columns.tolist()
 
+    return X, Y, category_names 
 
 def tokenize(text):
-    pass
+    tokens = word_tokenize(text)
+    lemmatizer = WordNetLemmatizer()
 
+    clean_tokens = []
+    for tok in tokens:
+        clean_tok = lemmatizer.lemmatize(tok).lower().strip()
+        clean_tokens.append(clean_tok)
+        
+    return clean_tokens
 
 def build_model():
-    pass
+    pipeline = Pipeline([
+        ('features', FeatureUnion([
 
+            ('text_pipeline', Pipeline([
+                ('vect', CountVectorizer(tokenizer = tokenize)),
+                ('tfidf', TfidfTransformer())
+            ]))
+        ])),
+
+        ('clf', MultiOutputClassifier(KNeighborsClassifier()))
+    ])
+
+    parameters = [
+        {"clf": [MultiOutputClassifier(KNeighborsClassifier())], 
+        'clf__n_neighbors': [3, 5, 10]
+        }, 
+        {"clf": [MultiOutputClassifier(DecisionTreeClassifier())], 
+        'clf__estimator__max_depth': [3, 5, 10]
+        },     
+        {"clf": [MultiOutputClassifier(RandomForestClassifier())],
+        "clf__estimator__n_estimators": [10, 50, 100],
+        "clf__estimator__max_depth":[3, 5]}
+    ]
+
+    cv = GridSearchCV(pipeline, param_grid = parameters, n_jobs = -1, cv = 4)
+    return cv
 
 def evaluate_model(model, X_test, Y_test, category_names):
-    pass
-
+    y_pred = model.predict(X_test)
+    for i in range(len(category_names)):
+        print("Category:", category_names[i],"\n", classification_report(Y_test.iloc[:, i].values, y_pred[:, i]))
 
 def save_model(model, model_filepath):
-    pass
+    filename = model_filepath
+    pickle.dump(model, open(filename, 'wb'))
 
 
 def main():
