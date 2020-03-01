@@ -55,7 +55,7 @@ def build_model():
 
     parameters = [
         {"clf": [MultiOutputClassifier(KNeighborsClassifier())], 
-        'clf__n_neighbors': [3, 5, 10]
+        'clf__estimator__n_neighbors': [3, 5, 10]
         }, 
         {"clf": [MultiOutputClassifier(DecisionTreeClassifier())], 
         'clf__estimator__max_depth': [3, 5, 10]
