@@ -21,6 +21,15 @@ nltk.download('wordnet')
 import pickle
 
 def load_data(database_filepath):
+    """Loads cleaned data prepared for modelling.
+    Args:
+        database_filepath (str): path 
+
+    Returns:
+        dataframes X, Y, used for modelling
+
+   """
+    
     engine = create_engine('sqlite:///' + database_filepath)
     df = pd.read_sql_table('data_prep', engine)  
     X = df.message
@@ -30,6 +39,15 @@ def load_data(database_filepath):
     return X, Y, category_names 
 
 def tokenize(text):
+    """ Tokenize given messages
+    Args:
+        text (str): message
+
+    Returns:
+        Cleaned tokens with applied lemmatization
+
+   """
+        
     tokens = word_tokenize(text)
     lemmatizer = WordNetLemmatizer()
 
@@ -41,6 +59,12 @@ def tokenize(text):
     return clean_tokens
 
 def build_model():
+    """ prepare pipeline and tune model parameters
+    Returns:
+        model with best parameters found by Grid Search
+
+   """
+    
     pipeline = Pipeline([
         ('features', FeatureUnion([
 
@@ -69,11 +93,30 @@ def build_model():
     return cv
 
 def evaluate_model(model, X_test, Y_test, category_names):
+    """ Evaluate best model statistics: F1, precision, accuracy
+    Args:
+        model: created model
+        X_test (dataframe): validation sample
+        Y_test (dataframe): validation sample 
+        category_names (list(str)): list of catagories
+    Returns:
+        prints statistics by category
+
+   """
+    
     y_pred = model.predict(X_test)
     for i in range(len(category_names)):
         print("Category:", category_names[i],"\n", classification_report(Y_test.iloc[:, i].values, y_pred[:, i]))
 
 def save_model(model, model_filepath):
+    """ save model to the directory which is passed as argument
+    Args:
+        model: created model
+        model_filepath (str): path
+    Returns:
+        None
+
+   """    
     filename = model_filepath
     pickle.dump(model, open(filename, 'wb'))
 

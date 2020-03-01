@@ -4,12 +4,31 @@ from sqlalchemy import create_engine
 
 
 def load_data(messages_filepath, categories_filepath):
+    """Function loads the data from provided filepaths.
+    Args:
+        messages_filepath: message file path 
+        categories_filepath: category file path
+
+    Returns:
+        Merged pandas dataframe of messages and categories
+
+   """
+    
     messages = pd.read_csv(messages_filepath)
     categories = pd.read_csv(categories_filepath)
     df = pd.merge(messages, categories, on = 'id', how = "left")
     return df
 
 def clean_data(df):
+    """ Split catagories column value to multiple columns and drop duplicates
+
+    Args:
+        df (pandas dataframe): dataframe 
+
+    Returns:
+        Cleaned pandas dataframe
+
+    """
     categories = df.categories.str.split(";", expand = True)
     row = categories.iloc[0]
     category_colnames = row.apply(lambda x: x[0:-2])
@@ -26,6 +45,16 @@ def clean_data(df):
     return df
 
 def save_data(df, database_filename):
+    """Save dataframe to db
+
+    Args:
+        df: pandas dataframe 
+        database_filename: database path
+
+    Returns:
+        Saved dataframe to database
+
+    """
     engine = create_engine('sqlite:///' + database_filename)
     table_name = "data_prep"
     df.to_sql(table_name, engine, if_exists='replace', index = False)
